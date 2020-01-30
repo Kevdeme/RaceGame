@@ -20,6 +20,8 @@ bright_red = (255,0,0)
 bright_green = (0,255,0)
 bright_blue = (0,0,255)
 
+
+
 # Display the Window
 gameDisplay = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('Race Game')
@@ -28,6 +30,11 @@ clock = pygame.time.Clock()
 # Load media
 carIMG = pygame.image.load('media/car.png')  # Load Car.
 carIMG = pygame.transform.scale(carIMG, (120, 320))  # Resize Car.
+
+pygame.display.set_icon(carIMG)
+
+
+pause = False
 
 car_width = 120
 
@@ -74,7 +81,25 @@ def message_display(text):
 
 def crash():
     # This is what happens when you Crashed
-    message_display('You Crashed')
+
+    largeText = pygame.font.Font('freesansbold.ttf', 115)
+    TextSurf, TextRect = text_objects('You Crashed', largeText, red)
+    TextRect.center = ((display_width / 2), (display_width / 3))
+    gameDisplay.blit(TextSurf, TextRect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+        #gameDisplay.fill(white)
+
+        button("Play Again", 250, 600, 130, 50, green, bright_green, game_loop)
+        button("QUIT", 450, 600, 100, 50, red, bright_red, quitgame)
+
+        pygame.display.update()
+        clock.tick(15)
 
 def button(msg,x,y,w,h,color1,color2,action=None):
     mouse = pygame.mouse.get_pos()
@@ -96,6 +121,35 @@ def button(msg,x,y,w,h,color1,color2,action=None):
 def quitgame():
     pygame.quit()
     quit()
+
+def unpause():
+    global pause
+    pause = False
+
+
+def paused():
+    global pause
+    pause = True
+
+    largeText = pygame.font.Font('freesansbold.ttf', 115)
+    TextSurf, TextRect = text_objects('Pause', largeText, red)
+    TextRect.center = ((display_width / 2), (display_width / 3))
+    gameDisplay.blit(TextSurf, TextRect)
+
+    while pause:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+        #gameDisplay.fill(white)
+
+        button("Continue", 250, 600, 100, 50, green, bright_green,unpause)
+        button("QUIT", 450, 600, 100, 50, red, bright_red,quitgame)
+
+
+        pygame.display.update()
+        clock.tick(15)
 
 def game_intro():
     # Intro Screen
@@ -149,6 +203,10 @@ def game_loop():
                     x_change = -20                  # Adds negative value to a variable.
                 elif event.key == pygame.K_RIGHT:   # If the key is Right key.
                     x_change = +20                  # Adds positive value to a variable.
+                if event.key == pygame.K_p:
+                    pause = True
+                    paused()
+
 
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
@@ -177,7 +235,7 @@ def game_loop():
             thing_starty = 0 - thing_height
             thing_startx = random.randrange(0, display_width)   # Area where the objects are going to appear
             dodged += 1
-            #thing_speed += 1                                    # Things moves quicker each time you dodge
+            thing_speed += 1                                    # Things moves quicker each time you dodge
             thing_width += (dodged * 1.2)                        # Make things bigger each time you dodge
 
         if y < thing_starty+thing_height:
