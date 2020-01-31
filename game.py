@@ -2,12 +2,30 @@ import pygame
 import time
 import random
 
-
 pygame.init()
 
+# Load media
+# Images:
+carIMG = pygame.image.load('media/car.png')  # Load Car.
+carIMG = pygame.transform.scale(carIMG, (120, 320))  # Resize Car.
+
+pygame.display.set_icon(carIMG) # Game Icon
+
+# Sounds:
+crash_sound = pygame.mixer.Sound('media/car-crash.ogg')
+
+pygame.mixer.music.load('media/song.ogg')
+
 # Size of the Window
+
+#Solid Screen Size
 display_width = 800
 display_height = 1000
+
+#Dinamic Screen Size
+#infoObject = pygame.display.Info()
+#display_width = infoObject.current_w
+#display_height = infoObject.current_h
 
 # Colors definitions
 black = (0, 0, 0)
@@ -15,6 +33,7 @@ white = (255, 255, 255)
 red = (150, 0, 0)
 green = (0, 150, 0)
 blue = (0, 0, 200)
+grey = (192,192,192)
 
 bright_red = (255,0,0)
 bright_green = (0,255,0)
@@ -27,22 +46,17 @@ gameDisplay = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('Race Game')
 clock = pygame.time.Clock()
 
-# Load media
-carIMG = pygame.image.load('media/car.png')  # Load Car.
-carIMG = pygame.transform.scale(carIMG, (120, 320))  # Resize Car.
-
-pygame.display.set_icon(carIMG)
-
 
 pause = False
 
 car_width = 120
 
 
-def things_dodged(count):
+def score(count,text,x,y):
+    # Display text on screen
     font = pygame.font.Font('freesansbold.ttf', 25)
-    text = font.render("Dodge: "+str(count), True, black)
-    gameDisplay.blit(text,(0,0))
+    text = font.render(text+str(count), True, white)
+    gameDisplay.blit(text,(x,y))
 
 
 
@@ -66,7 +80,7 @@ def text_objects(text, font, color):
 def message_display(text):
     # Function to display big Messages on the screen
     largeText = pygame.font.Font('freesansbold.ttf',115)        # Sets up the font and size of the text
-    TextSurf, TextRect = text_objects(text, largeText, red)          # The surface and rectangle of text = parameters
+    TextSurf, TextRect = text_objects(text, largeText, red)     # The surface and rectangle of text = parameters
     TextRect.center = ((display_width/2),(display_width/2))     # Position of the message
     gameDisplay.blit(TextSurf, TextRect)                        # Creates the message in the background
 
@@ -80,7 +94,10 @@ def message_display(text):
 
 
 def crash():
-    # This is what happens when you Crashed
+    # Stops the music, plays crash sound, display message and buttons to retry or exit
+
+    pygame.mixer.music.stop()
+    pygame.mixer.Sound.play(crash_sound)
 
     largeText = pygame.font.Font('freesansbold.ttf', 115)
     TextSurf, TextRect = text_objects('You Crashed', largeText, red)
@@ -105,7 +122,6 @@ def button(msg,x,y,w,h,color1,color2,action=None):
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
 
-    #print(click)
     if x + w > mouse[0] > x and y + h > mouse[1] > y:
         pygame.draw.rect(gameDisplay, color2, (x, y, w, h))
         if click[0] == 1 and action != None:
@@ -124,10 +140,14 @@ def quitgame():
 
 def unpause():
     global pause
+    pygame.mixer.music.unpause()
     pause = False
 
 
 def paused():
+
+    pygame.mixer.music.pause()
+
     global pause
     pause = True
 
@@ -152,7 +172,7 @@ def paused():
         clock.tick(15)
 
 def game_intro():
-    # Intro Screen
+
     intro = True
 
     while intro:
@@ -174,20 +194,40 @@ def game_intro():
         clock.tick(15)
 
 def game_loop():
+    global pause
+    # Start the music
+    pygame.mixer.music.play(-1) # Attribute indicates the amount of time the song is going to play
+    music = True
+
     # Initial Car position.
     x = (display_width * 0.45)
     y = (display_height * 0.7)
 
+    # Inside the road
+
+    inside_l = round(display_width / 6)
+    inside_r = round(display_width/1.5)
+
+
     # Initialization of variable for moving the car.
     x_change = 0
 
-    thing_startx = random.randrange(0, display_width)
+    lines_startx = display_width / 2
+    lines_starty = -1
+    lines_width = 15
+    lines_height = 80
+
+    lanes = [display_width / 4.7, display_width / 2.2, display_width / 1.47]
+
+    thing_startx = random.choice(lanes)
+    #thing_startx = random.randrange(inside_l, inside_r)
     thing_starty = -700
     thing_speed = 7
     thing_width = 100
     thing_height = 100
 
     dodged = 0
+    scores = 0
 
     gameExit = False
 
@@ -196,47 +236,99 @@ def game_loop():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:           # If you press the window X.
                 pygame.quit()
-                quit()                              # Quit the game.
+                quit()
 
             if event.type == pygame.KEYDOWN:        # If there is a Key being press.
-                if event.key == pygame.K_LEFT:      # If the key is Left key.
-                    x_change = -20                  # Adds negative value to a variable.
-                elif event.key == pygame.K_RIGHT:   # If the key is Right key.
-                    x_change = +20                  # Adds positive value to a variable.
-                if event.key == pygame.K_p:
-                    pause = True
-                    paused()
+
+                if event.key == pygame.K_LEFT:      # Side Movement
+                    x_change = -20
+                if event.key == pygame.K_RIGHT:
+                    x_change = +20
+
+                if event.key == pygame.K_UP:        # Acceleration
+                    thing_speed = +30
+                    scores += 2
+
+                if event.key == pygame.K_DOWN:      # Brake
+                    thing_speed = 5
+
+
+                if event.key == pygame.K_p:         # Pause
+                        paused()
+
+                if event.key == pygame.K_m:         # Music
+                    if music == True:
+                        pygame.mixer.music.pause()
+                        music = False
+                    else:
+                        pygame.mixer.music.unpause()
+                        music = True
 
 
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                     x_change = 0
 
+                if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
+                    thing_speed = 10
+
         x += x_change
 
-        gameDisplay.fill(white)     # Set background color
+        gameDisplay.fill(green)     # Set background color
 
-        # def things(thingx, thingy, thingw, thingh, color)
+        pygame.draw.rect(gameDisplay, grey, (inside_l, 0, inside_r, display_height)) #road
+        pygame.draw.rect(gameDisplay, black, (inside_l-30, 0, 20, display_height))   #left guardraid
+        pygame.draw.rect(gameDisplay, black, ((inside_l+inside_r) + 10, 0, 20, display_height))# rigth Guard
+
+        #Street Lines
+
+        for i in range(1,2000,150):
+            things(lines_startx-100,(lines_starty-display_height)+i,lines_width,lines_height,white)
+
+        for i in range(1,2000,150):
+            things(lines_startx+100,(lines_starty-display_height)+i,lines_width,lines_height,white)
+        lines_starty += thing_speed
+
+        # Respawn the lines
+        if lines_starty > display_height:
+            lines_starty = 0 - lines_height/2
+
+
+        # Road Objects
+
         things(thing_startx, thing_starty, thing_width, thing_height, black)
         thing_starty += thing_speed
 
 
+        # Car Initialization
+        car(x, y)
 
 
+        # Scores
+        scores += 1
+        if thing_speed == 37:
+            scores += 5
+        elif thing_speed == 5:
+            scores -= 5
+        else:
+            scores += 1
 
-        car(x, y)                   # Calls the car function with the new coordinates
-        things_dodged(dodged)
+        score(dodged,"Dodged: ",0,0)
+        score(scores, "Score: ",0,50)
+
 
 
         if x > display_width - car_width or x < 0: # If the car goes out of the screen
             crash()                 # Car crashes
 
+
+
         if thing_starty > display_height:           # If the object is out of screen aka there is no object
             thing_starty = 0 - thing_height
-            thing_startx = random.randrange(0, display_width)   # Area where the objects are going to appear
+            thing_startx = random.choice(lanes) # random.randrange(inside_l, inside_r)   # Area where the objects are going to appear
             dodged += 1
-            thing_speed += 1                                    # Things moves quicker each time you dodge
-            thing_width += (dodged * 1.2)                        # Make things bigger each time you dodge
+            #thing_speed += 1                                    # Things moves quicker each time you dodge
+            #thing_width += (dodged * 1.2)                        # Make things bigger each time you dodge
 
         if y < thing_starty+thing_height:
             print('Y Crossover')
@@ -249,6 +341,7 @@ def game_loop():
         clock.tick(120)             # FPS
         #print(f"Car start at position is {x} and car finish at position {x+car_width}")
         #print(f"object start at position is {thing_startx} and car finish at position {thing_startx+thing_width}")
+
 
 game_intro()
 game_loop()
